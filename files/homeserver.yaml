@@ -1,0 +1,218 @@
+# Configuration file for Synapse.
+#
+# For more information on how to configure Synapse, including a complete accounting of
+# each option, go to docs/usage/configuration/config_documentation.md or
+# https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html
+# Configuration file for Synapse.
+
+
+
+
+modules:
+  - module: mjolnir.Module
+    config:
+      # Prevent servers/users in the ban lists from inviting users on this
+      # server to rooms. Default true.
+      block_invites: true
+      # Flag messages sent by servers/users in the ban lists as spam. Currently
+      # this means that spammy messages will appear as empty to users. Default
+      # false.
+      block_messages: false
+      # Remove users from the user directory search by filtering matrix IDs and
+      # display names by the entries in the user ban list. Default false.
+      block_usernames: false
+      # The room IDs of the ban lists to honour. Unlike other parts of Mjolnir,
+      # this list cannot be room aliases or permalinks. This server is expected
+      # to already be joined to the room - Mjolnir will not automatically join
+      # these rooms.
+      ban_lists:
+        # EBL
+        - "!GGuqmQVLNyWASNjVQw:envs.net"
+        # matrix-coc-bl
+        #- "!WuBtumawCeOGEieRrp:matrix.org"
+        # matrix-tos-bl
+        #- "!tUPwPPmVTaiKXMiijj:matrix.org"
+        # Public Servers Shared Banlist
+        - "!RRGtWzzVKUJmDVRNnZ:aria-net.org"
+        # asragr-ban-list
+        - "!YImXsibeOfGBYVaElT:asra.gr"
+        # community-moderation-effort-bl:neko.dev
+        - "!fTjMjIzNKEsFlUIiru:neko.dev"
+      #message_max_length:
+         # Limit the characters in a message (event body) that a client can send in an event on this server.
+         # By default there is no limit (beyond the the limit the spec enforces on event size).
+         # Uncomment if you want messages to be limited to 510 characters.
+         #threshold: 510
+         # Limit messages only in certain rooms rooms.
+         # By default all rooms will enforce the limit.
+         # Uncomment if you want messages to only be subject to character limits in certain rooms.
+         #rooms:
+         #  - "!vMvyOCeCxHsggkmALd:localhost:9999"
+         # Also hide messages from remote servers that are over the `message_limit`.
+         # By default only events from this server will be limited.
+         # WARNING: Remote users on other servers will still be able to messages over the limit.
+         # Uncomment to enforce the `message_limit` on events from remote servers.
+         #remote_servers: true
+
+server_name: hackliberty.org
+public_baseurl: https://hackliberty.org/
+web_client_location: https://element.hackliberty.org/
+
+serve_server_wellknown: true
+
+pid_file: "/data/homeserver.pid"
+
+presence:
+  enabled: false
+allow_device_name_lookup_over_federation: false
+allow_public_rooms_over_federation: true
+include_profile_data_on_invite: true
+require_auth_for_profile_requests: true
+allow_profile_lookup_over_federation: true
+limit_profile_requests_to_users_who_share_rooms: false
+
+listeners:
+  - port: 9093
+    type: http
+    resources:
+     - names: [replication]
+    bind_addresses: ['0.0.0.0']
+
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    bind_addresses: ['0.0.0.0']
+
+    resources:
+      - names: [client, federation]
+        compress: false
+
+  - port: 9000
+    tls: false
+    type: metrics
+    bind_addresses: ['0.0.0.0']
+
+
+redaction_retention_period: 1m
+user_ips_max_age: 1m
+
+retention:
+
+  enabled: true
+
+  purge_jobs:
+    - longest_max_lifetime: 1h
+      interval: 30m
+    - shortest_max_lifetime: 1h
+      longest_max_lifetime: 12h
+      interval: 1h
+    - shortest_max_lifetime: 12h
+      longest_max_lifetime: 1d
+      interval: 12h
+    - shortest_max_lifetime: 1d
+      longest_max_lifetime: 10y
+      interval: 24h
+
+federation_client_minimum_tls_version: 1.2
+
+caches:
+  global_factor: 2.0
+
+  per_cache_factors:
+    get_users_who_share_room_with_user: 5.0
+
+  sync_response_cache_duration: 2m
+
+database:
+  name: psycopg2
+  txn_limit: 10000
+  args:
+    user: REDACTED
+    password: REDACTED
+    database: REDACTED
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+log_config: "/data/hackliberty.org.log.config"
+rc_federation:
+  window_size: 1000
+  sleep_limit: 10
+  sleep_delay: 500
+  reject_limit: 50
+  concurrent: 3
+
+federation_rr_transactions_per_room_per_second: 50
+
+media_store_path: "/data/media_store"
+
+max_upload_size: 50M
+max_image_pixels: 50M
+
+url_preview_enabled: true
+url_preview_ip_range_blacklist:
+  - '127.0.0.0/8'
+  - '10.0.0.0/8'
+  - '172.16.0.0/12'
+  - '192.168.0.0/16'
+  - '100.64.0.0/10'
+  - '192.0.0.0/24'
+  - '169.254.0.0/16'
+  - '192.88.99.0/24'
+  - '198.18.0.0/15'
+  - '192.0.2.0/24'
+  - '198.51.100.0/24'
+  - '203.0.113.0/24'
+  - '224.0.0.0/4'
+  - '::1/128'
+  - 'fe80::/10'
+  - 'fc00::/7'
+  - '2001:db8::/32'
+  - 'ff00::/8'
+  - 'fec0::/10'
+
+url_preview_url_blacklist:
+ - netloc: 'google.com'
+ - netloc: '*.google.com'
+ - scheme: 'http'
+ - netloc: '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
+
+enable_registration: false
+registration_requires_token: true
+registration_shared_secret: "REDACTED"
+
+allow_guest_access: false
+
+auto_join_rooms:
+  - "#community:hackliberty.org"
+
+enable_metrics: true
+
+
+signing_key_path: "/data/hackliberty.org.signing.key"
+trusted_key_servers:
+  - server_name: "matrix.org"
+
+inhibit_user_in_use_error: true
+
+suppress_key_server_warning: true
+
+report_stats: false
+
+macaroon_secret_key: "REDACTED"
+
+form_secret: "REDACTED"
+
+send_federation: false
+federation_sender_instances:
+  - federation1
+  - federation2
+  - federation3
+  - federation4
+
+redis:
+  enabled: true
+  host: redis
+  port: 6379

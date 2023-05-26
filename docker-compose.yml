@@ -1,0 +1,742 @@
+version: '3.7'
+
+networks:
+  matrix:
+  registration:
+  dimension:
+  gitea:
+  privatebin:
+  ots:
+  element:
+  chat:
+  cinny:
+  lemmy:
+  bookstack:
+  tor:
+  write:
+
+services:
+  synapse:
+    build: ./images/synapse-docker
+    restart: unless-stopped
+    container_name: synapse
+    user: "991:991"
+    environment:
+      - SYNAPSE_CONFIG_DIR=/data
+      - SYNAPSE_CONFIG_PATH=/data/homeserver.yaml
+    volumes:
+      - ./files:/data:Z
+    depends_on:
+      - postgres
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    extra_hosts:
+    - "host.docker.internal:host-gateway"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      
+  postgres:
+    image: docker.io/postgres:14.5-alpine
+    container_name: postgres
+    user: "70:70"
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - ./schemas:/var/lib/postgresql/data:Z
+    ports:
+      - 127.0.0.1:5432:5432
+    networks:
+      - matrix
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /var/run/postgresql:size=50M,mode=0770,uid=70,gid=70,noexec,nosuid,nodev
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  swag:
+    image: ghcr.io/linuxserver/swag
+    restart: unless-stopped
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - URL=${SWAG_URL}
+      - SUBDOMAINS=${SWAG_SUBDOMAINS}
+      - VALIDATION=http
+      - EMAIL=${SWAG_EMAIL}
+      - ONLY_SUBDOMAINS=false
+    volumes:
+      - ./swag:/config:Z
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 443:443
+      - 80:80
+      - 8448:8448
+    networks:
+      - matrix
+      - registration
+      - gitea
+      - privatebin
+      - ots
+      - element
+      - chat
+      - lemmy
+      - cinny
+      - bookstack
+      - tor
+      - write
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  pantalaimon:
+    build: ./images/pantalaimon
+    container_name: pantalaimon
+    user: "911:911"
+    restart: unless-stopped
+    volumes:
+      - ./pantalaimon_data:/data:Z
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    ports:
+      - 8008:8008
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  mjolnir:
+    build: ./images/mjolnir
+    container_name:  mjolnir
+    user: "911:911"
+    restart: unless-stopped
+    volumes:
+      - ./mjolnir:/data:Z
+    depends_on:
+      - pantalaimon
+    networks:
+      - matrix
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  maubot:
+    image: dock.mau.dev/maubot/maubot:latest
+    container_name: maubot
+    restart: unless-stopped
+    volumes:
+      - ./maubot:/data:Z
+    networks:
+      - matrix
+
+  matrix-registration:
+    build: ./images/synapse-captcha
+    container_name: matrix-registration
+    restart: unless-stopped
+    command: [
+                "--config-path=/data/config.yaml",
+                "serve"
+            ]
+    ports:
+      - 127.0.0.1:5000:5000
+    volumes:
+      - ./matrix-registration_data:/data:Z
+    networks:
+      - matrix
+      - tor
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - matrix
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  dimension:
+    build: ./images/matrix-dimension
+    container_name:  dimension
+    user: "1000:1000"
+    restart: unless-stopped
+    volumes:
+      - ./dimension:/data:Z
+      - ./dimension/config:/home/node/matrix-dimension/config/:Z
+    depends_on:
+      - dimension_db
+    networks:
+      - matrix
+      - dimension
+    ports:
+      - 127.0.0.1:8184:8184
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  dimension_db:
+    image: docker.io/postgres:14.5-alpine
+    container_name: dimension_db
+    user: "70:70"
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DIMENSION_DB_USER}
+      - POSTGRES_PASSWORD=${DIMENSION_DB_PASSWORD}
+      - POSTGRES_DB=${DIMENSION_DB_DB}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - ./dimension/db:/var/lib/postgresql/data:Z
+    ports:
+      - 127.0.0.1:5433:5432
+    networks:
+      - dimension
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /var/run/postgresql:size=50M,mode=0770,uid=70,gid=70,noexec,nosuid,nodev
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+      
+  grafana:
+    image: docker.io/grafana/grafana:latest
+    container_name: grafana
+    user: "472:472"
+    volumes:
+      - ./grafana-data:/var/lib/grafana:Z
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    networks:
+      - matrix
+
+  prometheus:
+    image: docker.io/prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - 9000:9090
+    volumes:
+      - ./prometheus:/etc/prometheus:Z
+    networks:
+      - matrix
+    command: --web.config.file=/etc/prometheus/web.yml --config.file=/etc/prometheus/prometheus.yml
+
+  node_exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    expose:
+      - 9100
+    networks:
+      - matrix
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    command:
+    - '-port=9099'
+    - "--housekeeping_interval=30s"
+    - "--docker_only=true"
+    ports:
+    - 9099:9099
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - matrix
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter
+    restart: always
+    environment:
+      - DATA_SOURCE_URI=postgres:5432/synapse?sslmode=disable 
+      - DATA_SOURCE_USER=${POSTGRES_USER}
+      - DATA_SOURCE_PASS=${POSTGRES_PASSWORD}
+    ports:
+      - "9187:9187"
+    networks:
+      - matrix
+    depends_on:
+      - postgres
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:0.10.0 
+    container_name: nginx-exporter
+    restart: unless-stopped
+    ports:
+      - "4040:4040"
+    networks:
+      - matrix
+    depends_on:
+      - swag
+    command:
+      - -nginx.scrape-uri
+      - http://swag:81/nginx_status
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=gitea-postgres:5432
+      - GITEA__database__NAME=${GITEA_DB_NAME}
+      - GITEA__database__USER=${GITEA_POSTGRES_USER}
+      - GITEA__database__PASSWD=${GITEA_POSTGRES_PASSWORD}
+    restart: always
+    networks:
+      - gitea
+      - tor
+    volumes:
+      - ./gitea:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3333:3333"
+    depends_on:
+      - gitea-postgres
+
+  gitea-postgres:
+    image: postgres:14
+    container_name: gitea-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=${GITEA_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${GITEA_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${GITEA_DB_NAME}
+    networks:
+      - gitea
+    volumes:
+      - ./gitea-postgres:/var/lib/postgresql/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  privatebin:
+    image: privatebin/fs:latest
+    container_name: privatebin
+    user: "882:882"
+    restart: unless-stopped
+    volumes:
+      - ./privatebin-data:/srv/data:Z
+      - ./privatebin-data/conf.php:/srv/cfg/conf.php:ro
+    networks:
+      - privatebin
+      - tor
+    read_only: true
+
+  ots:
+    image: luzifer/ots:latest
+    container_name: ots
+    restart: unless-stopped
+    networks:
+      - ots
+      - tor
+    entrypoint: ["/usr/local/bin/ots"]
+
+  element:
+    image: vectorim/element-web:latest
+    container_name: element
+    restart: unless-stopped
+    volumes:
+      - ./element-data/element-config.json:/app/config.json:ro
+    networks:
+      - element
+
+  chat:
+    image: ghcr.io/schildichat/schildichat-web:latest
+    container_name: chat
+    restart: unless-stopped
+    volumes:
+      - ./chat-data/element-config.json:/app/config.json:ro
+    networks:
+      - chat
+
+  cinny:
+    image: ghcr.io/cinnyapp/cinny:latest
+    container_name: cinny
+    restart: unless-stopped
+    volumes:
+      - ./cinny-data/config.json:/app/config.json:ro
+    networks:
+      - cinny
+
+  lemmy-postgres:
+    image: postgres:15-alpine
+    user: "70:70"
+    container_name: lemmy-postgres
+    hostname: lemmy-postgres
+    environment:
+      - POSTGRES_USER=${LEMMY_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${LEMMY_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${LEMMY_POSTGRES_DB}
+    volumes:
+      - ./lemmy/volumes/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - lemmy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  lemmy:
+    image: dessalines/lemmy:latest
+    container_name: lemmy
+    restart: unless-stopped
+    environment:
+      - RUST_LOG="warn,lemmy_server=info,lemmy_api=info,lemmy_api_common=info,lemmy_api_crud=info,lemmy_apub=info,lemmy_db_schema=info,lemmy_db_views=info,lemmy_db_views_actor=info,lemmy_db_views_moderator=info,lemmy_routes=info,lemmy_utils=info,lemmy_websocket=info"
+    volumes:
+      - ./lemmy/lemmy.hjson:/config/config.hjson
+    depends_on:
+      - postgres
+      - pictrs
+    networks:
+      - lemmy
+
+  lemmy-ui:
+    image: dessalines/lemmy-ui:latest
+    container_name: lemmy-ui
+    restart: unless-stopped
+    environment:
+      - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
+      - LEMMY_UI_LEMMY_EXTERNAL_HOST=links.hackliberty.org
+      - LEMMY_UI_HTTPS=true
+    depends_on: 
+      - lemmy
+    networks:
+      - lemmy
+
+  pictrs:
+    image: asonix/pictrs:0.3.1
+    hostname: pictrs
+    container_name: pictrs
+    ports: 
+      - "8537:8080"
+      - "6670:6669"
+    user: 991:991
+    volumes:
+      - ./lemmy/volumes/pictrs:/mnt
+    restart: unless-stopped
+    networks:
+      - lemmy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  protonmail-bridge:
+    image: shenxn/protonmail-bridge
+    container_name: protonmail-bridge
+    ports:
+      - "1025:25"
+    restart: unless-stopped
+    volumes:
+      - ./protonmail:/root
+    networks:
+      - lemmy
+
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: bookstack
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - APP_URL=https://docs.hackliberty.org
+      - DB_HOST=bookstack_db
+      - DB_PORT=3306
+      - DB_USER=${BOOKSTACK_DB_USER}
+      - DB_PASS=${BOOKSTACK_DB_PASS}
+      - DB_DATABASE=${BOOKSTACK_DB_DB}
+    volumes:
+      - ./bookstack:/config:Z
+    restart: unless-stopped
+    depends_on:
+      - bookstack_db
+    networks:
+      - bookstack
+
+  bookstack_db:
+    image: lscr.io/linuxserver/mariadb
+    container_name: bookstack_db
+    environment:
+      - PUID=1001
+      - PGID=1001
+      - MYSQL_ROOT_PASSWORD=${BOOKSTACK_DB_PASS}
+      - TZ=Europe/London
+      - MYSQL_DATABASE=${BOOKSTACK_DB_DB}
+      - MYSQL_USER=${BOOKSTACK_DB_USER}
+      - MYSQL_PASSWORD=${BOOKSTACK_DB_PASS}
+    volumes:
+      - ./bookstack:/config:Z
+    restart: unless-stopped
+    networks:
+      - bookstack
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 14400
+
+  matrix-chatgpt4-bot:
+    image: ghcr.io/matrixgpt/matrix-chatgpt-bot:sha-b78cc35
+    container_name: chatgpt4
+    volumes:
+      - ./chatgpt:/storage
+    env_file:
+      - ./.env
+
+  matrix-chatgpt3-bot:
+    image: ghcr.io/matrixgpt/matrix-chatgpt-bot:latest
+    container_name: chatgpt3
+    volumes:
+      - ./chatgpt3:/storage
+    env_file:
+      - ./.chatgpt3
+
+  tor:
+    image: osminogin/tor-simple:latest
+    container_name: tor
+    volumes:
+      - ./tor-data:/var/lib/tor
+      - ./tor-data/torrc:/etc/tor
+    ports:
+      - 127.0.0.1:9050:9050
+    networks:
+      - tor
+      - matrix
+
+  writefreely:
+    image: algernon/writefreely
+    container_name: writefreely
+    user: "5000:5000"
+    volumes:
+      - ./writefreely:/data:Z
+    ports:
+      - 9999:9999
+    networks:
+      - write
+      - tor
+
+# WORKERS 
+
+  synapse-generic-worker-4:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-generic-worker-4
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/worker4.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    ports:
+      - 127.0.0.1:8083:8081
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-generic-worker-3:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-generic-worker-3
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/worker3.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    ports:
+      - 127.0.0.1:8082:8081
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-generic-worker-2:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-generic-worker-2
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/worker2.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    ports:
+      - 127.0.0.1:8081:8081
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-generic-worker-1:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-generic-worker-1
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/worker1.yaml"]
+    volumes:
+      - ./files:/data:Z
+    ports:
+      - 127.0.0.1:8080:8081
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-federation-sender-4:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-federation-sender-4
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/federation4.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL 
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-federation-sender-3:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-federation-sender-3
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/federation3.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL 
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-federation-sender-2:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-federation-sender-2
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/federation2.yaml"]
+    volumes:  
+      - ./files:/data:Z
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL 
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  synapse-federation-sender-1:
+    build: ./images/synapse-worker-docker
+    container_name: synapse-federation-sender-1
+    user: "991:991"
+    restart: unless-stopped
+    environment:
+      SYNAPSE_WORKER: synapse.app.generic_worker
+    entrypoint: ["/start.py", "run", "--config-path=/data/homeserver.yaml", "--config-path=/data/workers/federation1.yaml"]
+    volumes:
+      - ./files:/data:Z
+    depends_on:
+      - synapse
+    networks:
+      - matrix
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
