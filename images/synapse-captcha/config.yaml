@@ -1,0 +1,46 @@
+server_location: 'http://synapse:8008'
+server_name: 'hackliberty.org'
+shared_secret: 'REDACTED'
+admin_api_shared_secret: 'REDACTED' # to generate tokens via the web api
+base_url: '' # e.g. '/element' for https://example.tld/element/register
+client_redirect: 'https://element.hackliberty.org'
+riot_instace: 'https://element.hackliberty.org'
+#riot_instance: 'https://riot.im/app/'
+db: 'sqlite:////data/db.sqlite3'
+host: '0.0.0.0'
+port: 5000
+rate_limit: ["10000 per day", "100 per minute"]
+allow_cors: false
+ip_logging: false
+logging:
+  disable_existing_loggers: False
+  version: 1
+  root:
+    level: DEBUG
+    handlers: [console, file]
+  formatters:
+    brief:
+      format: '%(name)s - %(levelname)s - %(message)s'
+    precise:
+      format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: brief
+      stream: ext://sys.stdout
+    file:
+      class: logging.handlers.RotatingFileHandler
+      formatter: precise
+      level: INFO
+      filename: m_reg.log
+      maxBytes: 10485760 # 10MB
+      backupCount: 3
+      encoding: utf8
+# password requirements
+password:
+  min_length: 14
+# username requirements
+username:
+  validation_regex: [ '[a-zA-Z0-9]' ] 
+  invalidation_regex: [ '(info|admin|null|123456|mail|fuck|webmaster|root|test|guest|adm|mysql|user|administrator|oracle|ftp|pi|puppet|ansible|ec2-user|vagrant|azureuse|mod|moderator|host|postgres|synapse|support)' ] 
