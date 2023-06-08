@@ -145,7 +145,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   maubot:
-    image: dock.mau.dev/maubot/maubot:latest
+    image: dock.mau.dev/maubot/maubot
     container_name: maubot
     restart: unless-stopped
     volumes:
@@ -172,7 +172,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   redis:
-    image: redis:latest
+    image: redis
     container_name: redis
     restart: unless-stopped
     networks:
@@ -230,7 +230,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
       
   grafana:
-    image: docker.io/grafana/grafana:latest
+    image: docker.io/grafana/grafana
     container_name: grafana
     user: "472:472"
     volumes:
@@ -242,7 +242,7 @@ services:
       - matrix
 
   prometheus:
-    image: docker.io/prom/prometheus:latest
+    image: docker.io/prom/prometheus
     container_name: prometheus
     restart: unless-stopped
     ports:
@@ -273,7 +273,7 @@ services:
       - matrix
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor
     container_name: cadvisor
     command:
     - '-port=9099'
@@ -319,7 +319,7 @@ services:
       - http://swag:81/nginx_status
 
   gitea:
-    image: gitea/gitea:latest
+    image: gitea/gitea
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -358,7 +358,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   privatebin:
-    image: privatebin/fs:latest
+    image: privatebin/fs
     container_name: privatebin
     user: "882:882"
     restart: unless-stopped
@@ -371,7 +371,7 @@ services:
     read_only: true
 
   ots:
-    image: luzifer/ots:latest
+    image: luzifer/ots
     container_name: ots
     restart: unless-stopped
     networks:
@@ -380,7 +380,7 @@ services:
     entrypoint: ["/usr/local/bin/ots"]
 
   element:
-    image: vectorim/element-web:latest
+    image: vectorim/element-web
     container_name: element
     restart: unless-stopped
     volumes:
@@ -389,7 +389,7 @@ services:
       - element
 
   chat:
-    image: ghcr.io/schildichat/schildichat-web:latest
+    image: ghcr.io/schildichat/schildichat-web
     container_name: chat
     restart: unless-stopped
     volumes:
@@ -398,7 +398,7 @@ services:
       - chat
 
   cinny:
-    image: ghcr.io/cinnyapp/cinny:latest
+    image: ghcr.io/cinnyapp/cinny
     container_name: cinny
     restart: unless-stopped
     volumes:
@@ -424,7 +424,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy:latest
+    image: dessalines/lemmy
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -438,7 +438,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:latest
+    image: dessalines/lemmy-ui:0.17.3
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
@@ -478,7 +478,7 @@ services:
       - lemmy
 
   bookstack:
-    image: lscr.io/linuxserver/bookstack:latest
+    image: lscr.io/linuxserver/bookstack
     container_name: bookstack
     environment:
       - PUID=1001
@@ -540,7 +540,7 @@ services:
       - ./.chatgpt3
 
   tor:
-    image: osminogin/tor-simple:latest
+    image: osminogin/tor-simple
     container_name: tor
     volumes:
       - ./tor-data:/var/lib/tor
