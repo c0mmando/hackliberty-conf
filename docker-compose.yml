@@ -424,7 +424,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy
+    image: dessalines/lemmy:0.17.4
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -438,7 +438,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.17.3
+    image: dessalines/lemmy-ui:0.17.4
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
