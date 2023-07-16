@@ -42,6 +42,7 @@ services:
   postgres:
     image: docker.io/postgres:14.5-alpine
     container_name: postgres
+    shm_size: 1g
     user: "70:70"
     restart: unless-stopped
     environment:
@@ -424,7 +425,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy:0.17.4
+    image: dessalines/lemmy:0.18.0
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -438,7 +439,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.17.4
+    image: dessalines/lemmy-ui:0.18.0
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
