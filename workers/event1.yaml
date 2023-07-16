@@ -1,0 +1,21 @@
+worker_app: synapse.app.generic_worker
+worker_name: event1
+
+worker_replication_host: synapse
+worker_replication_http_port: 9093
+worker_replication_http_tls: true
+worker_log_config: /data/log/event1.yaml
+
+worker_listeners:
+
+  - type: http
+    port: 8081
+    x_forwarded: true
+    resources:
+      - names: [client]
+        compress: false
+
+  - type: http
+    port: 8034
+    resources:
+      - names: [replication]
