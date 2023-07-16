@@ -5,9 +5,6 @@
 # https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html
 # Configuration file for Synapse.
 
-
-
-
 modules:
   - module: mjolnir.Module
     config:
@@ -148,8 +145,8 @@ federation_rr_transactions_per_room_per_second: 50
 
 media_store_path: "/data/media_store"
 
-max_upload_size: 50M
-max_image_pixels: 50M
+max_upload_size: 10M
+max_image_pixels: 10M
 
 url_preview_enabled: true
 url_preview_ip_range_blacklist:
@@ -216,3 +213,25 @@ redis:
   enabled: true
   host: redis
   port: 6379
+
+instance_map:
+  main:
+    host: synapse
+    port: 9093
+    tls: false
+  worker1:
+    host: synapse
+    port: 8080
+    tls: false
+  worker2:
+    host: synapse
+    port: 8081
+    tls: false
+  worker3:
+    host: synapse
+    port: 8082
+    tls: false
+  worker4:
+    host: synapse
+    port: 8083
+    tls: false

@@ -1,7 +1,3 @@
 worker_app: synapse.app.generic_worker
 worker_name: federation1
-
-worker_replication_host: synapse
-worker_replication_http_port: 9093
-worker_replication_http_tls: false
 worker_log_config: /data/log/federation1.yaml
