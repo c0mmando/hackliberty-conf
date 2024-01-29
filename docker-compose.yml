@@ -9,7 +9,6 @@ networks:
   ots:
   element:
   chat:
-  cinny:
   lemmy:
   bookstack:
   tor:
@@ -52,8 +51,6 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
       - ./schemas:/var/lib/postgresql/data:Z
-    ports:
-      - 127.0.0.1:5432:5432
     networks:
       - matrix
     read_only: true
@@ -96,7 +93,6 @@ services:
       - element
       - chat
       - lemmy
-      - cinny
       - bookstack
       - tor
       - write
@@ -116,8 +112,6 @@ services:
       - synapse
     networks:
       - matrix
-    ports:
-      - 8008:8008
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -162,8 +156,6 @@ services:
                 "--config-path=/data/config.yaml",
                 "serve"
             ]
-    ports:
-      - 127.0.0.1:5000:5000
     volumes:
       - ./matrix-registration_data:/data:Z
     networks:
@@ -194,8 +186,6 @@ services:
     networks:
       - matrix
       - dimension
-    ports:
-      - 127.0.0.1:8184:8184
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -216,8 +206,6 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
       - ./dimension/db:/var/lib/postgresql/data:Z
-    ports:
-      - 127.0.0.1:5433:5432
     networks:
       - dimension
     read_only: true
@@ -237,8 +225,6 @@ services:
     volumes:
       - ./grafana-data:/var/lib/grafana:Z
     restart: unless-stopped
-    ports:
-      - 3000:3000
     networks:
       - matrix
 
@@ -246,8 +232,6 @@ services:
     image: docker.io/prom/prometheus
     container_name: prometheus
     restart: unless-stopped
-    ports:
-      - 9000:9090
     volumes:
       - ./prometheus:/etc/prometheus:Z
     networks:
@@ -267,7 +251,6 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-    restart: unless-stopped
     expose:
       - 9100
     networks:
@@ -280,8 +263,6 @@ services:
     - '-port=9099'
     - "--housekeeping_interval=30s"
     - "--docker_only=true"
-    ports:
-    - 9099:9099
     volumes:
     - /:/rootfs:ro
     - /var/run:/var/run:rw
@@ -298,8 +279,6 @@ services:
       - DATA_SOURCE_URI=postgres:5432/synapse?sslmode=disable 
       - DATA_SOURCE_USER=${POSTGRES_USER}
       - DATA_SOURCE_PASS=${POSTGRES_PASSWORD}
-    ports:
-      - "9187:9187"
     networks:
       - matrix
     depends_on:
@@ -309,8 +288,6 @@ services:
     image: nginx/nginx-prometheus-exporter:0.10.0 
     container_name: nginx-exporter
     restart: unless-stopped
-    ports:
-      - "4040:4040"
     networks:
       - matrix
     depends_on:
@@ -320,7 +297,7 @@ services:
       - http://swag:81/nginx_status
 
   gitea:
-    image: gitea/gitea
+    image: gitea/gitea:1.21.1
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -338,8 +315,6 @@ services:
       - ./gitea:/data
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    ports:
-      - "3333:3333"
     depends_on:
       - gitea-postgres
 
@@ -398,15 +373,6 @@ services:
     networks:
       - chat
 
-  cinny:
-    image: ghcr.io/cinnyapp/cinny
-    container_name: cinny
-    restart: unless-stopped
-    volumes:
-      - ./cinny-data/config.json:/app/config.json:ro
-    networks:
-      - cinny
-
   lemmy-postgres:
     image: postgres:15-alpine
     user: "70:70"
@@ -425,7 +391,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy:0.18.0
+    image: dessalines/lemmy:0.19.2
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -439,7 +405,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.18.0
+    image: dessalines/lemmy-ui:0.19.2
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
@@ -456,8 +422,8 @@ services:
     hostname: pictrs
     container_name: pictrs
     ports: 
-      - "8537:8080"
-      - "6670:6669"
+      - "127.0.0.1:8537:8080"
+      - "127.0.0.1:6670:6669"
     user: 991:991
     volumes:
       - ./lemmy/volumes/pictrs:/mnt
@@ -471,7 +437,7 @@ services:
     image: shenxn/protonmail-bridge
     container_name: protonmail-bridge
     ports:
-      - "1025:25"
+      - "127.0.0.1:1025:25"
     restart: unless-stopped
     volumes:
       - ./protonmail:/root
@@ -546,11 +512,8 @@ services:
     volumes:
       - ./tor-data:/var/lib/tor
       - ./tor-data/torrc:/etc/tor
-    ports:
-      - 127.0.0.1:9050:9050
     networks:
       - tor
-      - matrix
 
   writefreely:
     image: algernon/writefreely
@@ -558,8 +521,6 @@ services:
     user: "5000:5000"
     volumes:
       - ./writefreely:/data:Z
-    ports:
-      - 9999:9999
     networks:
       - write
       - tor
