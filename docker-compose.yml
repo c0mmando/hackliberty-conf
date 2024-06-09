@@ -13,6 +13,7 @@ networks:
   bookstack:
   tor:
   write:
+  simplex:
 
 services:
   synapse:
@@ -54,6 +55,8 @@ services:
     networks:
       - matrix
     read_only: true
+    ports: 
+      - "127.0.0.1:5432:5432"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -100,6 +103,50 @@ services:
       - no-new-privileges:true
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
+
+  simplex-smp-server:
+    image: simplexchat/smp-server:latest
+    container_name:  simplex-smp
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "5223:5223"
+    volumes:
+      - ./simplex/smp/config:/etc/opt/simplex:Z
+      - ./simplex/smp/logs:/var/opt/simplex:Z
+      - ./swag/www/simplex.hackliberty.org:/var/www/smp-server-web:Z
+    environment:
+      - ADDR=${SIMPLEX_ADDR}
+#     - PASS=${SIMPLEX_PASSWORD}
+    networks:
+      - simplex
+      - tor
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  simplex-xftp-server:
+    image: simplexchat/xftp-server:latest
+    container_name:  simplex-xftp
+    user: "1000:1000"
+    ports:
+      - "5233:443"
+    restart: unless-stopped
+    volumes:
+      - ./simplex/xftp/config:/etc/opt/simplex-xftp:Z
+      - ./simplex/xftp/logs:/var/opt/simplex-xftp:Z
+      - ./simplex/xftp/files:/srv/xftp:X
+    environment:
+      - ADDR=${XFTP_ADDR}
+      - QUOTA=150gb
+    networks:
+      - simplex
+      - tor
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   pantalaimon:
     build: ./images/pantalaimon
@@ -297,7 +344,7 @@ services:
       - http://swag:81/nginx_status
 
   gitea:
-    image: gitea/gitea
+    image: gitea/gitea:1.22.0
     container_name: gitea
     environment:
       - USER_UID=1000
@@ -391,7 +438,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy:0.19.2
+    image: dessalines/lemmy:0.19.3
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -405,7 +452,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.19.2
+    image: dessalines/lemmy-ui:0.19.3
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
@@ -499,7 +546,7 @@ services:
       - ./.env
 
   matrix-chatgpt3-bot:
-    image: ghcr.io/matrixgpt/matrix-chatgpt-bot:latest
+    image: ghcr.io/matrixgpt/matrix-chatgpt-bot:3.1.4
     container_name: chatgpt3
     volumes:
       - ./chatgpt3:/storage
@@ -512,6 +559,15 @@ services:
     volumes:
       - ./tor-data:/var/lib/tor
       - ./tor-data/torrc:/etc/tor
+    networks:
+      - tor
+
+  tor-proxy:
+    image: osminogin/tor-simple
+    container_name: tor-proxy
+    volumes:
+      - ./tor-proxy:/var/lib/tor
+      - ./tor-proxy/torrc:/etc/tor
     networks:
       - tor
 
