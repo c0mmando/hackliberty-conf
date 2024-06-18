@@ -87,6 +87,7 @@ services:
       - 443:443
       - 80:80
       - 8448:8448
+      - 127.0.0.1:10080:10080
     networks:
       - matrix
       - registration
@@ -438,7 +439,7 @@ services:
       - "com.centurylinklabs.watchtower.enable=false"
 
   lemmy:
-    image: dessalines/lemmy:0.19.3
+    image: dessalines/lemmy:0.19.4
     container_name: lemmy
     restart: unless-stopped
     environment:
@@ -452,7 +453,7 @@ services:
       - lemmy
 
   lemmy-ui:
-    image: dessalines/lemmy-ui:0.19.3
+    image: dessalines/lemmy-ui:0.19.4
     container_name: lemmy-ui
     restart: unless-stopped
     environment:
@@ -465,7 +466,7 @@ services:
       - lemmy
 
   pictrs:
-    image: asonix/pictrs:0.3.1
+    image: asonix/pictrs:0.5.16
     hostname: pictrs
     container_name: pictrs
     ports: 
