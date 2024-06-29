@@ -66,6 +66,35 @@ services:
     labels:
       - "com.centurylinklabs.watchtower.enable=false"
 
+  sliding-sync:
+    image: ghcr.io/matrix-org/sliding-sync
+    container_name:  sliding-sync
+    restart: unless-stopped
+    environment:
+      - "SYNCV3_SECRET=${SYNCV3_SECRET}"
+      - "SYNCV3_SERVER=${SYNCV3_SERVER}"
+      - "SYNCV3_DB=${SYNCV3_DB}"
+      - "SYNCV3_BINDADDR=${SYNCV3_BINDADDR}"
+    depends_on:
+      - sliding-postgres
+    networks:
+      - matrix
+
+  sliding-postgres:
+    image: docker.io/postgres:16-alpine
+    container_name:  sliding-postgres
+    restart: unless-stopped
+    environment:
+      - "POSTGRES_USER=${SLIDING_POSTGRES_USER}"
+      - "POSTGRES_PASSWORD=${SLIDING_POSTGRES_PASSWORD}"
+      - "POSTGRES_DB=${SLIDING_POSTGRES_DB}"
+    volumes:
+      - ./sliding-sync-db:/var/lib/postgresql/data
+    networks:
+      - matrix
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
   swag:
     image: ghcr.io/linuxserver/swag
     restart: unless-stopped
